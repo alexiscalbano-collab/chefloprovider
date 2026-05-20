@@ -13,6 +13,7 @@ export default function AchatPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     fetch('/api/ingredients').then(r => r.json()).then(j => setIngredients(j.data || []))
@@ -20,133 +21,148 @@ export default function AchatPage() {
 
   async function handleSubmit() {
     setError('')
-    if (!selected || !quantite || !prix) {
-      setError('Veuillez remplir tous les champs')
-      return
-    }
-
+    if (!selected || !quantite || !prix) { setError('Veuillez remplir tous les champs'); return }
     setLoading(true)
     const res = await fetch('/api/achats', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ingredient_id: selected.id,
-        ingredient_nom: selected.nom,
-        quantite: parseFloat(quantite),
-        unite,
-        prix: parseFloat(prix),
-      }),
+      body: JSON.stringify({ ingredient_id: selected.id, ingredient_nom: selected.nom, quantite: parseFloat(quantite), unite, prix: parseFloat(prix) }),
     })
     const json = await res.json()
     setLoading(false)
-
     if (!json.success) { setError(json.error); return }
-
     setSuccess(true)
     setSelected(null)
     setQuantite('')
     setPrix('')
     setShowModal(false)
+    setTimeout(() => setSuccess(false), 3000)
   }
 
+  const filtered = ingredients.filter(i => i.nom.toLowerCase().includes(search.toLowerCase()))
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <h1 className="text-base font-semibold text-gray-900 text-center">Achats</h1>
-      </header>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: #f4f3f0; min-height: 100vh; }
 
-      <div className="max-w-lg mx-auto px-4 py-6">
-        {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-            Achat enregistré avec succès !
-          </div>
-        )}
+        .ac-header { background: #0a0f1e; padding: 16px 20px; display: flex; align-items: center; gap: 10px; }
+        .ac-logo { width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-family: 'DM Serif Display', serif; font-size: 14px; }
+        .ac-brand-name { font-family: 'DM Serif Display', serif; font-size: 16px; color: white; }
+        .ac-badge { margin-left: auto; padding: 4px 10px; background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); border-radius: 20px; font-size: 11px; font-weight: 600; }
 
-        <p className="text-sm text-gray-600 mb-4">Sélectionnez un ingrédient pour enregistrer un achat.</p>
+        .ac-content { padding: 24px 20px; max-width: 600px; margin: 0 auto; }
 
-        <div className="space-y-2">
-          {ingredients.map((ing) => (
-            <button
-              key={ing.id}
-              onClick={() => { setSelected(ing); setShowModal(true); setSuccess(false) }}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
-            >
-              <span className="text-sm font-medium text-gray-900">{ing.nom}</span>
-              <span className="text-lg text-blue-600">+</span>
-            </button>
-          ))}
-          {ingredients.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-8">Aucun ingrédient disponible</p>
+        .ac-success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #15803d; font-weight: 500; }
+
+        .ac-page-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: #0a0f1e; margin-bottom: 4px; }
+        .ac-page-sub { font-size: 13px; color: #9ca3af; margin-bottom: 20px; }
+
+        .ac-search { width: 100%; padding: 11px 14px; background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: #0a0f1e; outline: none; margin-bottom: 16px; transition: all 0.15s; }
+        .ac-search:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.08); }
+
+        .ac-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .ac-item { background: white; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: space-between; }
+        .ac-item:hover { border-color: #f59e0b; background: #fffbeb; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .ac-item-name { font-size: 14px; font-weight: 600; color: #0a0f1e; }
+        .ac-item-icon { width: 32px; height: 32px; background: #fef3c7; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .ac-empty { text-align: center; padding: 48px; color: #9ca3af; font-size: 14px; }
+
+        .ac-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 50; padding: 0; }
+        .ac-modal { background: white; border-radius: 20px 20px 0 0; width: 100%; max-width: 600px; padding: 28px 24px 40px; }
+        .ac-modal-handle { width: 36px; height: 4px; background: #e5e7eb; border-radius: 2px; margin: 0 auto 20px; }
+        .ac-modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #0a0f1e; margin-bottom: 4px; }
+        .ac-modal-sub { font-size: 13px; color: #9ca3af; margin-bottom: 24px; }
+
+        .ac-label { display: block; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .ac-input { width: 100%; padding: 12px 14px; background: #f8f7f4; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: #0a0f1e; outline: none; transition: all 0.15s; margin-bottom: 16px; }
+        .ac-input:focus { border-color: #f59e0b; background: white; box-shadow: 0 0 0 3px rgba(245,158,11,0.08); }
+
+        .ac-units { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .ac-unit { padding: 10px; background: #f8f7f4; border: 1.5px solid #e5e7eb; border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b7280; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+        .ac-unit.active { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+
+        .ac-error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+
+        .ac-modal-actions { display: flex; gap: 10px; }
+        .ac-btn-cancel { flex: 1; padding: 14px; background: #f3f4f6; color: #374151; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+        .ac-btn-submit { flex: 2; padding: 14px; background: #0a0f1e; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+        .ac-btn-submit:hover:not(:disabled) { background: #1e3a5f; }
+        .ac-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+      `}</style>
+
+      <div>
+        <header className="ac-header">
+          <div className="ac-logo">C</div>
+          <span className="ac-brand-name">ChefloProvider</span>
+          <span className="ac-badge">Achats</span>
+        </header>
+
+        <div className="ac-content">
+          {success && (
+            <div className="ac-success">
+              ✓ Achat enregistré avec succès !
+            </div>
+          )}
+
+          <h1 className="ac-page-title">Enregistrer un achat</h1>
+          <p className="ac-page-sub">Sélectionnez un ingrédient pour saisir un achat</p>
+
+          <input
+            className="ac-search"
+            placeholder="Rechercher un ingrédient..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+
+          {filtered.length === 0 ? (
+            <div className="ac-empty">Aucun ingrédient trouvé</div>
+          ) : (
+            <div className="ac-grid">
+              {filtered.map(ing => (
+                <div key={ing.id} className="ac-item" onClick={() => { setSelected(ing); setShowModal(true); setError('') }}>
+                  <div className="ac-item-name">{ing.nom}</div>
+                  <div className="ac-item-icon">+</div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Modal saisie */}
         {showModal && selected && (
-          <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6">
-              <h3 className="font-semibold text-gray-900 mb-1">{selected.nom}</h3>
-              <p className="text-sm text-gray-500 mb-4">Renseignez les informations d'achat</p>
+          <div className="ac-modal-bg" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+            <div className="ac-modal">
+              <div className="ac-modal-handle" />
+              <div className="ac-modal-title">{selected.nom}</div>
+              <div className="ac-modal-sub">Renseignez les informations d'achat</div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Quantité</label>
-                  <input
-                    type="number"
-                    value={quantite}
-                    onChange={(e) => setQuantite(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              <label className="ac-label">Quantité</label>
+              <input type="number" value={quantite} onChange={e => setQuantite(e.target.value)} placeholder="0" className="ac-input" />
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Unité</label>
-                  <div className="flex gap-2">
-                    {(['kg', 'litre', 'gramme'] as const).map((u) => (
-                      <button
-                        key={u}
-                        onClick={() => setUnite(u)}
-                        className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
-                          unite === u ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Prix (€)</label>
-                  <input
-                    type="number"
-                    value={prix}
-                    onChange={(e) => setPrix(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {error && <p className="text-red-600 text-sm">{error}</p>}
+              <label className="ac-label">Unité</label>
+              <div className="ac-units">
+                {(['kg', 'litre', 'gramme'] as const).map(u => (
+                  <button key={u} onClick={() => setUnite(u)} className={`ac-unit ${unite === u ? 'active' : ''}`}>{u}</button>
+                ))}
               </div>
 
-              <div className="flex gap-2 mt-4">
-                <button onClick={() => setShowModal(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium"
-                >
-                  {loading ? 'Envoi...' : 'Ajouter'}
+              <label className="ac-label">Prix ($)</label>
+              <input type="number" value={prix} onChange={e => setPrix(e.target.value)} placeholder="0.00" step="0.01" className="ac-input" />
+
+              {error && <div className="ac-error">⚠ {error}</div>}
+
+              <div className="ac-modal-actions">
+                <button onClick={() => setShowModal(false)} className="ac-btn-cancel">Annuler</button>
+                <button onClick={handleSubmit} disabled={loading} className="ac-btn-submit">
+                  {loading ? 'Envoi...' : '✓ Ajouter l\'achat'}
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }
