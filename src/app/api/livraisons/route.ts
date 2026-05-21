@@ -18,20 +18,57 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const clientId = searchParams.get('client_id')
+    const limit = parseInt(searchParams.get('limit') || '50')
 
-    const livraisons = clientId
-      ? await sql`SELECT * FROM livraisons WHERE client_id = ${clientId} ORDER BY date_livraison DESC` as Livraison[]
-      : await sql`SELECT * FROM livraisons ORDER BY date_livraison DESC` as Livraison[]
+    // Récupérer les livraisons avec leurs produits en une seule requête JOIN
+    const rows = clientId
+      ? await sql`
+          SELECT l.id, l.client_id, l.client_nom, l.date_livraison, l.created_at,
+                 lp.id as lp_id, lp.produit_nom, lp.quantity_repris, lp.quantity_rayon, lp.quantity_remis
+          FROM livraisons l
+          LEFT JOIN livraison_produits lp ON lp.livraison_id = l.id
+          WHERE l.client_id = ${clientId}
+          ORDER BY l.date_livraison DESC
+          LIMIT ${limit * 10}
+        `
+      : await sql`
+          SELECT l.id, l.client_id, l.client_nom, l.date_livraison, l.created_at,
+                 lp.id as lp_id, lp.produit_nom, lp.quantity_repris, lp.quantity_rayon, lp.quantity_remis
+          FROM livraisons l
+          LEFT JOIN livraison_produits lp ON lp.livraison_id = l.id
+          ORDER BY l.date_livraison DESC
+          LIMIT ${limit * 10}
+        `
 
-    // Récupérer les produits pour chaque livraison
-    for (const liv of livraisons) {
-      liv.produits = await sql`
-        SELECT * FROM livraison_produits WHERE livraison_id = ${liv.id}
-      ` as any[]
+    // Regrouper les produits par livraison
+    const livraisonsMap = new Map<number, Livraison>()
+    for (const row of rows as any[]) {
+      if (!livraisonsMap.has(row.id)) {
+        livraisonsMap.set(row.id, {
+          id: row.id,
+          client_id: row.client_id,
+          client_nom: row.client_nom,
+          date_livraison: row.date_livraison,
+          created_at: row.created_at,
+          produits: [],
+        })
+      }
+      if (row.lp_id) {
+        livraisonsMap.get(row.id)!.produits!.push({
+          id: row.lp_id,
+          livraison_id: row.id,
+          produit_nom: row.produit_nom,
+          quantity_repris: row.quantity_repris,
+          quantity_rayon: row.quantity_rayon,
+          quantity_remis: row.quantity_remis,
+        })
+      }
     }
 
+    const livraisons = Array.from(livraisonsMap.values()).slice(0, limit)
     return NextResponse.json({ data: livraisons, success: true })
-  } catch {
+  } catch (error) {
+    console.error('GET /api/livraisons error:', error)
     return NextResponse.json({ error: 'Erreur serveur', success: false }, { status: 500 })
   }
 }
@@ -44,7 +81,6 @@ export async function POST(req: NextRequest) {
 
     const { client_id, client_nom, produits } = parsed.data
 
-    // Créer la livraison
     const livResult = await sql`
       INSERT INTO livraisons (client_id, client_nom)
       VALUES (${client_id}, ${client_nom})
@@ -52,7 +88,6 @@ export async function POST(req: NextRequest) {
     ` as Livraison[]
     const livraison = livResult[0]
 
-    // Insérer les lignes produits
     for (const p of produits) {
       await sql`
         INSERT INTO livraison_produits (livraison_id, produit_nom, quantity_repris, quantity_rayon, quantity_remis)
@@ -61,7 +96,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ data: livraison, success: true }, { status: 201 })
-  } catch {
+  } catch (error) {
+    console.error('POST /api/livraisons error:', error)
     return NextResponse.json({ error: 'Erreur serveur', success: false }, { status: 500 })
   }
 }
