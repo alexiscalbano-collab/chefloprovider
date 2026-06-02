@@ -180,6 +180,7 @@ export default function LivraisonPage() {
             <div className="lv-logo">C</div>
             <span className="lv-brand-name">ChefloProvider</span>
           </div>
+          <a href="/livraison/planning" className="lv-lang-btn" style={{marginRight: "8px"}}>📅 Planning</a>
           <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="lv-lang-btn">
             {lang === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
           </button>
