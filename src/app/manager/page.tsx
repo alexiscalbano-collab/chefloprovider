@@ -30,63 +30,61 @@ interface Livraison {
   total?: number
   produits?: LivraisonProduit[]
 }
-interface Produit {
-  id: number
-  nom: string
-}
-interface Ingredient {
-  id: number
-  nom: string
-}
+interface Produit { id: number; nom: string }
+interface Ingredient { id: number; nom: string }
+interface Client { id: number; name: string }
 
 // ── Helpers ────────────────────────────────────────────────
 const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-
 const STATUT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   livree:   { bg: '#dcfce7', color: '#16a34a', label: 'Livrée' },
   en_cours: { bg: '#fef9c3', color: '#ca8a04', label: 'En cours' },
   annulee:  { bg: '#fee2e2', color: '#dc2626', label: 'Annulée' },
 }
-
 const TABS = [
   { key: 'livraisons', label: 'Livraisons', icon: '🚚' },
   { key: 'achats',     label: 'Achats',     icon: '🛒' },
   { key: 'produits',   label: 'Produits',   icon: '📦' },
 ]
-
-// ── Styles communs ─────────────────────────────────────────
 const btn = (bg: string, color = 'white') => ({
   padding: '8px 14px', border: 'none', borderRadius: '8px',
   background: bg, color, fontSize: '13px', fontWeight: '600' as const,
   cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
 })
-const input = {
+const inp: React.CSSProperties = {
   width: '100%', padding: '10px 14px', border: '1.5px solid #e5e7eb',
   borderRadius: '10px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif",
-  outline: 'none', boxSizing: 'border-box' as const,
+  outline: 'none', boxSizing: 'border-box',
 }
-const th = {
-  padding: '13px 18px', textAlign: 'left' as const,
-  fontSize: '11px', fontWeight: '600' as const,
-  color: '#888', textTransform: 'uppercase' as const, letterSpacing: '0.5px',
+const th: React.CSSProperties = {
+  padding: '13px 18px', textAlign: 'left',
+  fontSize: '11px', fontWeight: 600,
+  color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px',
 }
-const td = (i: number) => ({
+const td = (i: number): React.CSSProperties => ({
   padding: '13px 18px', borderTop: '1px solid #f3f4f6',
   background: i % 2 ? '#fafafa' : 'white', fontSize: '14px',
+})
+
+const emptyLivForm = () => ({
+  client_id: 0, client_nom: '',
+  date_livraison: new Date().toISOString().split('T')[0],
+  produits: [] as LivraisonProduit[],
 })
 
 export default function ManagerPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'livraisons' | 'achats' | 'produits'>('livraisons')
-  const [livraisons, setLivraisons]     = useState<Livraison[]>([])
-  const [achats, setAchats]             = useState<Achat[]>([])
-  const [produits, setProduits]         = useState<Produit[]>([])
-  const [ingredients, setIngredients]   = useState<Ingredient[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [saving, setSaving]             = useState(false)
-  const [confirm, setConfirm]           = useState<{ type: string; id: number } | null>(null)
+  const [activeTab, setActiveTab]   = useState<'livraisons' | 'achats' | 'produits'>('livraisons')
+  const [livraisons, setLivraisons] = useState<Livraison[]>([])
+  const [achats, setAchats]         = useState<Achat[]>([])
+  const [produits, setProduits]     = useState<Produit[]>([])
+  const [ingredients, setIngredients] = useState<Ingredient[]>([])
+  const [clients, setClients]       = useState<Client[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [saving, setSaving]         = useState(false)
+  const [confirm, setConfirm]       = useState<{ type: string; id: number } | null>(null)
 
   // Modals
   const [modalLiv, setModalLiv]         = useState<Livraison | null>(null)
@@ -95,8 +93,9 @@ export default function ManagerPage() {
   const [addModal, setAddModal]         = useState<'achat' | 'produit' | 'livraison' | null>(null)
 
   // Form states
-  const [livForm, setLivForm] = useState({ client_nom: '', statut: 'en_cours', date_livraison: '', produits: [] as LivraisonProduit[] })
-  const [achatForm, setAchatForm] = useState({ ingredient_id: 0, ingredient_nom: '', quantite: 0, unite: 'kg' as 'kg'|'litre'|'gramme', prix: 0 })
+  const [livForm, setLivForm]       = useState({ client_nom: '', statut: 'en_cours', date_livraison: '', produits: [] as LivraisonProduit[] })
+  const [newLivForm, setNewLivForm] = useState(emptyLivForm())
+  const [achatForm, setAchatForm]   = useState({ ingredient_id: 0, ingredient_nom: '', quantite: 0, unite: 'kg' as 'kg' | 'litre' | 'gramme', prix: 0 })
   const [produitForm, setProduitForm] = useState({ nom: '' })
 
   // Auth check
@@ -110,22 +109,23 @@ export default function ManagerPage() {
   const loadAll = () => {
     setLoading(true)
     Promise.all([
-      fetch('/api/livraisons').then(r => r.json()),
+      fetch('/api/livraisons?limit=50').then(r => r.json()),
       fetch('/api/achats').then(r => r.json()),
       fetch('/api/produits').then(r => r.json()),
       fetch('/api/ingredients').then(r => r.json()),
-    ]).then(([liv, ach, prod, ing]) => {
+      fetch('/api/clients').then(r => r.json()),
+    ]).then(([liv, ach, prod, ing, cli]) => {
       setLivraisons(liv.data || [])
       setAchats(ach.data || [])
       setProduits(prod.data || [])
       setIngredients(ing.data || [])
+      setClients(cli.data || [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }
 
   useEffect(() => { if (status === 'authenticated') loadAll() }, [status])
 
-  // ── Stats ──────────────────────────────────────────────────
   const coutAchats = achats.reduce((s, a) => s + (a.prix * a.quantite), 0)
 
   // ── DELETE ─────────────────────────────────────────────────
@@ -148,14 +148,23 @@ export default function ManagerPage() {
     await fetch(`/api/livraisons/${modalLiv.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_nom: livForm.client_nom,
-        statut: livForm.statut,
-        date_livraison: livForm.date_livraison,
-        produits: livForm.produits,
-      }),
+      body: JSON.stringify(livForm),
     })
     setModalLiv(null)
+    setSaving(false)
+    loadAll()
+  }
+
+  // ── ADD LIVRAISON ──────────────────────────────────────────
+  const handleAddLivraison = async () => {
+    if (!newLivForm.client_id || newLivForm.produits.length === 0) return
+    setSaving(true)
+    await fetch('/api/livraisons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newLivForm),
+    })
+    setAddModal(null)
     setSaving(false)
     loadAll()
   }
@@ -188,7 +197,7 @@ export default function ManagerPage() {
     loadAll()
   }
 
-  // ── ADD ────────────────────────────────────────────────────
+  // ── ADD ACHAT / PRODUIT ────────────────────────────────────
   const handleAdd = async () => {
     setSaving(true)
     if (addModal === 'achat') {
@@ -211,7 +220,6 @@ export default function ManagerPage() {
 
   if (status === 'loading') return null
 
-  // ── RENDER ─────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: '#f5f0eb', fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -264,13 +272,20 @@ export default function ManagerPage() {
 
         {/* Bouton ajouter */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          {activeTab === 'livraisons' && (
+            <button onClick={() => { setNewLivForm(emptyLivForm()); setAddModal('livraison') }} style={{ ...btn('#0a0f1e') }}>
+              + Ajouter une livraison
+            </button>
+          )}
           {activeTab === 'achats' && (
-            <button onClick={() => { setAchatForm({ ingredient_id: 0, ingredient_nom: '', quantite: 0, unite: 'kg', prix: 0 }); setAddModal('achat') }}
-              style={{ ...btn('#0a0f1e') }}>+ Ajouter un achat</button>
+            <button onClick={() => { setAchatForm({ ingredient_id: 0, ingredient_nom: '', quantite: 0, unite: 'kg', prix: 0 }); setAddModal('achat') }} style={{ ...btn('#0a0f1e') }}>
+              + Ajouter un achat
+            </button>
           )}
           {activeTab === 'produits' && (
-            <button onClick={() => { setProduitForm({ nom: '' }); setAddModal('produit') }}
-              style={{ ...btn('#0a0f1e') }}>+ Ajouter un produit</button>
+            <button onClick={() => { setProduitForm({ nom: '' }); setAddModal('produit') }} style={{ ...btn('#0a0f1e') }}>
+              + Ajouter un produit
+            </button>
           )}
         </div>
 
@@ -283,7 +298,7 @@ export default function ManagerPage() {
         ) : (
           <div style={{ background: 'white', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
 
-            {/* ── LIVRAISONS ── */}
+            {/* LIVRAISONS */}
             {activeTab === 'livraisons' && (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -325,7 +340,7 @@ export default function ManagerPage() {
               </table>
             )}
 
-            {/* ── ACHATS ── */}
+            {/* ACHATS */}
             {activeTab === 'achats' && (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -369,7 +384,7 @@ export default function ManagerPage() {
               </table>
             )}
 
-            {/* ── PRODUITS ── */}
+            {/* PRODUITS */}
             {activeTab === 'produits' && (
               <div style={{ padding: '20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
@@ -394,6 +409,102 @@ export default function ManagerPage() {
         )}
       </div>
 
+      {/* ── MODAL AJOUTER LIVRAISON ── */}
+      {addModal === 'livraison' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '560px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0f1e', marginBottom: '20px' }}>Nouvelle livraison</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* Magasin */}
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Magasin</label>
+                <select style={inp} value={newLivForm.client_id}
+                  onChange={e => {
+                    const c = clients.find(x => x.id === Number(e.target.value))
+                    setNewLivForm(f => ({ ...f, client_id: Number(e.target.value), client_nom: c?.name || '' }))
+                  }}>
+                  <option value={0}>Sélectionner un magasin...</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Date de livraison</label>
+                <input type="date" style={inp} value={newLivForm.date_livraison}
+                  onChange={e => setNewLivForm(f => ({ ...f, date_livraison: e.target.value }))} />
+              </div>
+
+              {/* Produits */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e' }}>Produits</label>
+                  <button
+                    onClick={() => setNewLivForm(f => ({ ...f, produits: [...f.produits, { produit_nom: '', quantity_repris: 0, quantity_rayon: 0, quantity_remis: 0 }] }))}
+                    style={{ ...btn('#f3f4f6', '#333'), fontSize: '12px', padding: '6px 12px' }}>
+                    + Ajouter produit
+                  </button>
+                </div>
+
+                {newLivForm.produits.length === 0 && (
+                  <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', padding: '16px', background: '#f9fafb', borderRadius: '10px' }}>
+                    Aucun produit ajouté
+                  </p>
+                )}
+
+                {newLivForm.produits.map((p, i) => (
+                  <div key={i} style={{ background: '#f9fafb', borderRadius: '12px', padding: '14px', marginBottom: '10px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '8px' }}>
+                      <select style={{ ...inp, flex: 1 }} value={p.produit_nom}
+                        onChange={e => {
+                          const newP = [...newLivForm.produits]
+                          newP[i] = { ...newP[i], produit_nom: e.target.value }
+                          setNewLivForm(f => ({ ...f, produits: newP }))
+                        }}>
+                        <option value="">Sélectionner un produit...</option>
+                        {produits.map(pr => <option key={pr.id} value={pr.nom}>{pr.nom}</option>)}
+                      </select>
+                      <button onClick={() => {
+                        const newP = newLivForm.produits.filter((_, idx) => idx !== i)
+                        setNewLivForm(f => ({ ...f, produits: newP }))
+                      }} style={{ ...btn('#fee2e2', '#dc2626'), padding: '6px 10px', flexShrink: 0 }}>✕</button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                      {[
+                        { field: 'quantity_repris', label: '↩ Repris' },
+                        { field: 'quantity_rayon',  label: '📦 Rayon' },
+                        { field: 'quantity_remis',  label: '✅ Remis' },
+                      ].map(({ field, label }) => (
+                        <div key={field}>
+                          <label style={{ fontSize: '11px', color: '#888', display: 'block', marginBottom: '4px' }}>{label}</label>
+                          <input type="number" min="0" style={{ ...inp, padding: '6px 10px' }}
+                            value={p[field as keyof typeof p] as number}
+                            onChange={e => {
+                              const newP = [...newLivForm.produits]
+                              newP[i] = { ...newP[i], [field]: Number(e.target.value) }
+                              setNewLivForm(f => ({ ...f, produits: newP }))
+                            }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button onClick={() => setAddModal(null)} style={{ ...btn('white', '#333'), flex: 1, border: '1.5px solid #e5e7eb' }}>Annuler</button>
+              <button onClick={handleAddLivraison}
+                disabled={saving || !newLivForm.client_id || newLivForm.produits.length === 0}
+                style={{ ...btn(!newLivForm.client_id || newLivForm.produits.length === 0 ? '#9ca3af' : '#0a0f1e'), flex: 1, cursor: !newLivForm.client_id || newLivForm.produits.length === 0 ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'Création...' : 'Créer la livraison'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── MODAL EDIT LIVRAISON ── */}
       {modalLiv && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
@@ -402,11 +513,11 @@ export default function ManagerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Magasin</label>
-                <input style={input} value={livForm.client_nom} onChange={e => setLivForm(f => ({ ...f, client_nom: e.target.value }))} />
+                <input style={inp} value={livForm.client_nom} onChange={e => setLivForm(f => ({ ...f, client_nom: e.target.value }))} />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Statut</label>
-                <select style={{ ...input }} value={livForm.statut} onChange={e => setLivForm(f => ({ ...f, statut: e.target.value }))}>
+                <select style={inp} value={livForm.statut} onChange={e => setLivForm(f => ({ ...f, statut: e.target.value }))}>
                   <option value="en_cours">En cours</option>
                   <option value="livree">Livrée</option>
                   <option value="annulee">Annulée</option>
@@ -414,7 +525,7 @@ export default function ManagerPage() {
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Date</label>
-                <input type="date" style={input} value={livForm.date_livraison} onChange={e => setLivForm(f => ({ ...f, date_livraison: e.target.value }))} />
+                <input type="date" style={inp} value={livForm.date_livraison} onChange={e => setLivForm(f => ({ ...f, date_livraison: e.target.value }))} />
               </div>
               {livForm.produits.length > 0 && (
                 <div>
@@ -428,12 +539,12 @@ export default function ManagerPage() {
                             <label style={{ fontSize: '11px', color: '#888', display: 'block', marginBottom: '4px' }}>
                               {field === 'quantity_repris' ? 'Repris' : field === 'quantity_rayon' ? 'Rayon' : 'Remis'}
                             </label>
-                            <input type="number" style={{ ...input, padding: '6px 10px' }}
+                            <input type="number" style={{ ...inp, padding: '6px 10px' }}
                               value={p[field]}
                               onChange={e => {
-                                const newProd = [...livForm.produits]
-                                newProd[i] = { ...newProd[i], [field]: Number(e.target.value) }
-                                setLivForm(f => ({ ...f, produits: newProd }))
+                                const newP = [...livForm.produits]
+                                newP[i] = { ...newP[i], [field]: Number(e.target.value) }
+                                setLivForm(f => ({ ...f, produits: newP }))
                               }} />
                           </div>
                         ))}
@@ -459,7 +570,7 @@ export default function ManagerPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Ingrédient</label>
-                <select style={{ ...input }} value={achatForm.ingredient_id}
+                <select style={inp} value={achatForm.ingredient_id}
                   onChange={e => {
                     const ing = ingredients.find(i => i.id === Number(e.target.value))
                     setAchatForm(f => ({ ...f, ingredient_id: Number(e.target.value), ingredient_nom: ing?.nom || '' }))
@@ -471,11 +582,11 @@ export default function ManagerPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Quantité</label>
-                  <input type="number" style={input} value={achatForm.quantite} onChange={e => setAchatForm(f => ({ ...f, quantite: Number(e.target.value) }))} />
+                  <input type="number" style={inp} value={achatForm.quantite} onChange={e => setAchatForm(f => ({ ...f, quantite: Number(e.target.value) }))} />
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Unité</label>
-                  <select style={{ ...input }} value={achatForm.unite} onChange={e => setAchatForm(f => ({ ...f, unite: e.target.value as 'kg'|'litre'|'gramme' }))}>
+                  <select style={inp} value={achatForm.unite} onChange={e => setAchatForm(f => ({ ...f, unite: e.target.value as 'kg' | 'litre' | 'gramme' }))}>
                     <option value="kg">kg</option>
                     <option value="litre">litre</option>
                     <option value="gramme">gramme</option>
@@ -484,7 +595,7 @@ export default function ManagerPage() {
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Prix unitaire ($)</label>
-                <input type="number" step="0.01" style={input} value={achatForm.prix} onChange={e => setAchatForm(f => ({ ...f, prix: Number(e.target.value) }))} />
+                <input type="number" step="0.01" style={inp} value={achatForm.prix} onChange={e => setAchatForm(f => ({ ...f, prix: Number(e.target.value) }))} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
@@ -495,22 +606,8 @@ export default function ManagerPage() {
         </div>
       )}
 
-      {/* ── MODAL EDIT PRODUIT ── */}
-      {modalProduit && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
-          <div style={{ background: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '400px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0f1e', marginBottom: '20px' }}>Modifier le produit</h3>
-            <input style={input} value={produitForm.nom} onChange={e => setProduitForm({ nom: e.target.value })} placeholder="Nom du produit" />
-            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => setModalProduit(null)} style={{ ...btn('white', '#333'), flex: 1, border: '1.5px solid #e5e7eb' }}>Annuler</button>
-              <button onClick={handleUpdateProduit} disabled={saving} style={{ ...btn('#0a0f1e'), flex: 1 }}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL AJOUTER ── */}
-      {addModal && (
+      {/* ── MODAL AJOUTER ACHAT / PRODUIT ── */}
+      {addModal && addModal !== 'livraison' && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
           <div style={{ background: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '420px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0f1e', marginBottom: '20px' }}>
@@ -520,7 +617,7 @@ export default function ManagerPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Ingrédient</label>
-                  <select style={{ ...input }} value={achatForm.ingredient_id}
+                  <select style={inp} value={achatForm.ingredient_id}
                     onChange={e => {
                       const ing = ingredients.find(i => i.id === Number(e.target.value))
                       setAchatForm(f => ({ ...f, ingredient_id: Number(e.target.value), ingredient_nom: ing?.nom || '' }))
@@ -532,11 +629,11 @@ export default function ManagerPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Quantité</label>
-                    <input type="number" style={input} value={achatForm.quantite} onChange={e => setAchatForm(f => ({ ...f, quantite: Number(e.target.value) }))} />
+                    <input type="number" style={inp} value={achatForm.quantite} onChange={e => setAchatForm(f => ({ ...f, quantite: Number(e.target.value) }))} />
                   </div>
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Unité</label>
-                    <select style={{ ...input }} value={achatForm.unite} onChange={e => setAchatForm(f => ({ ...f, unite: e.target.value as 'kg'|'litre'|'gramme' }))}>
+                    <select style={inp} value={achatForm.unite} onChange={e => setAchatForm(f => ({ ...f, unite: e.target.value as 'kg' | 'litre' | 'gramme' }))}>
                       <option value="kg">kg</option>
                       <option value="litre">litre</option>
                       <option value="gramme">gramme</option>
@@ -545,16 +642,30 @@ export default function ManagerPage() {
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#0a0f1e', display: 'block', marginBottom: '6px' }}>Prix unitaire ($)</label>
-                  <input type="number" step="0.01" style={input} value={achatForm.prix} onChange={e => setAchatForm(f => ({ ...f, prix: Number(e.target.value) }))} />
+                  <input type="number" step="0.01" style={inp} value={achatForm.prix} onChange={e => setAchatForm(f => ({ ...f, prix: Number(e.target.value) }))} />
                 </div>
               </div>
             )}
             {addModal === 'produit' && (
-              <input style={input} value={produitForm.nom} onChange={e => setProduitForm({ nom: e.target.value })} placeholder="Nom du produit" />
+              <input style={inp} value={produitForm.nom} onChange={e => setProduitForm({ nom: e.target.value })} placeholder="Nom du produit" />
             )}
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
               <button onClick={() => setAddModal(null)} style={{ ...btn('white', '#333'), flex: 1, border: '1.5px solid #e5e7eb' }}>Annuler</button>
               <button onClick={handleAdd} disabled={saving} style={{ ...btn('#0a0f1e'), flex: 1 }}>{saving ? 'Ajout...' : 'Ajouter'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL EDIT PRODUIT ── */}
+      {modalProduit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '400px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0f1e', marginBottom: '20px' }}>Modifier le produit</h3>
+            <input style={inp} value={produitForm.nom} onChange={e => setProduitForm({ nom: e.target.value })} placeholder="Nom du produit" />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <button onClick={() => setModalProduit(null)} style={{ ...btn('white', '#333'), flex: 1, border: '1.5px solid #e5e7eb' }}>Annuler</button>
+              <button onClick={handleUpdateProduit} disabled={saving} style={{ ...btn('#0a0f1e'), flex: 1 }}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</button>
             </div>
           </div>
         </div>
