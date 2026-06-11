@@ -1,117 +1,174 @@
 # ChefloProvider — Next.js
 
-Migration complète de 3 apps Flutter/Firebase vers une stack web unifiée.
+Application web de gestion de livraisons de produits frais (salades, sandwichs) vers des shops partenaires au Cambodge. Migration complète depuis AppSheet / Google Sheets + Flutter / Firebase vers une stack web unifiée.
 
 ## Stack technique
-- **Frontend** : Next.js 14 (App Router) + TypeScript
-- **Base de données** : Neon (PostgreSQL serverless, 3GB gratuit)
-- **Auth** : NextAuth.js (credentials)
-- **Style** : Tailwind CSS
-- **Déploiement** : Vercel (recommandé)
+
+| Couche | Technologie |
+|--------|-------------|
+| Frontend + Backend | Next.js 14 (App Router) + TypeScript |
+| Base de données | Neon (PostgreSQL serverless, 3 GB gratuit) |
+| Authentification | NextAuth.js (credentials + JWT) |
+| Style | Tailwind CSS |
+| Déploiement | Netlify (Vercel interdit usage commercial sur plan gratuit) |
+| Région BDD | AWS Asia Pacific — Singapore (proximité Cambodge) |
 
 ## Structure du projet
 
-```
 src/
 ├── app/
-│   ├── admin/          → App Admin (CRUD complet)
-│   ├── livraison/      → App Livraison (formulaire multi-étapes)
-│   ├── achat/          → App Achat (enregistrement achats)
-│   ├── api/            → Routes API REST
+│   ├── admin/               → Dashboard Admin (CRUD complet)
+│   ├── manager/             → Dashboard Manager (Livraisons, Achats, Produits)
+│   │   └── login/           → Page de connexion Manager
+│   ├── livraison/           → App Livraison (formulaire multi-étapes 5 étapes)
+│   │   └── planning/        → Planning & historique des livraisons
+│   ├── achat/               → App Achat (enregistrement achats ingrédients)
+│   ├── login/               → Page de connexion principale
+│   ├── api/                 → Routes API REST
 │   │   ├── clients/
+│   │   │   └── [id]/
 │   │   ├── produits/
+│   │   │   └── [id]/
 │   │   ├── ingredients/
 │   │   ├── achats/
+│   │   │   └── [id]/
 │   │   ├── livraisons/
+│   │   │   └── [id]/
 │   │   └── recettes/
-│   ├── login/          → Page de connexion
 │   └── layout.tsx
 ├── components/
-│   └── admin/          → Composants CRUD admin
+│   └── admin/
+│       ├── ClientsSection.tsx
+│       ├── AchatsSection.tsx
+│       ├── LivraisonsSection.tsx
+│       ├── ProduitsSection.tsx
+│       ├── IngredientsSection.tsx
+│       └── RecettesSection.tsx
 ├── lib/
-│   ├── db.ts           → Connexion Neon
-│   └── auth.ts         → Configuration NextAuth
-├── types/              → Types TypeScript globaux
-└── middleware.ts       → Protection des routes par rôle
-```
+│   ├── db.ts
+│   └── auth.ts
+├── types/
+│   └── index.ts
+└── middleware.ts
 
 ## Démarrage rapide
 
-### 1. Installer les dépendances
+### 1. Cloner et installer
 ```bash
+git clone https://github.com/alexiscalbano-collab/chefloprovider.git
+cd chefloprovider
 npm install
 ```
 
-### 2. Configurer la base de données Neon
-1. Créer un compte sur [neon.tech](https://neon.tech)
-2. Créer un nouveau projet
-3. Copier la connection string
-4. Créer `.env.local` depuis `.env.example`
-5. Exécuter le schéma SQL :
-```bash
-# Depuis la console Neon ou psql
-psql $DATABASE_URL -f schema.sql
-```
-
-### 3. Configurer les variables d'environnement
+### 2. Configurer les variables d'environnement
 ```bash
 cp .env.example .env.local
-# Remplir DATABASE_URL et NEXTAUTH_SECRET
 ```
 
-Générer NEXTAUTH_SECRET :
+Remplir `.env.local` :
+```env
+DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require
+NEXTAUTH_SECRET=votre-secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+Générer `NEXTAUTH_SECRET` :
 ```bash
 openssl rand -base64 32
 ```
 
-### 4. Créer le premier utilisateur admin
-```sql
--- Dans la console Neon
-INSERT INTO users (email, password_hash, role, name)
-VALUES ('admin@cheflo.fr', '$2b$10$...', 'admin', 'Admin');
-```
-
-Pour générer le hash du mot de passe :
-```js
-const bcrypt = require('bcryptjs')
-console.log(await bcrypt.hash('votre-mot-de-passe', 10))
-```
-
-### 5. Lancer en développement
+### 3. Lancer en développement
 ```bash
+# Démarrage standard
 npm run dev
-```
 
-Ouvrir [http://localhost:3000](http://localhost:3000)
+# Démarrage rapide avec Turbopack (recommandé)
+npm run dev -- --turbo
+```
 
 ## Rôles utilisateurs
 
 | Rôle | Accès | URL |
 |------|-------|-----|
-| `admin` | Toute l'administration | `/admin` |
-| `livreur` | App livraison uniquement | `/livraison` |
-| `achat` | App achat uniquement | `/achat` |
+| `admin` | Dashboard complet — CRUD sur tout | `/login` → `/admin` |
+| `manager` | Livraisons + Achats + Produits | `/manager/login` → `/manager` |
+| `livreur` | Formulaire livraison uniquement | `/login` → `/livraison` |
+| `achat` | Saisie achats uniquement | `/login` → `/achat` |
 
-## Déploiement Vercel
-
+### Créer un utilisateur
 ```bash
-npm install -g vercel
-vercel --prod
+node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('mot-de-passe', 10).then(h => console.log(h))"
 ```
 
-Ajouter les variables d'environnement dans le dashboard Vercel.
+```sql
+INSERT INTO users (email, password_hash, role, name)
+VALUES ('email@example.com', '$2a$10$...', 'admin', 'Nom');
+```
+
+## Routes API
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| GET | `/api/clients` | Liste tous les clients |
+| POST | `/api/clients` | Crée un client |
+| PUT | `/api/clients/[id]` | Modifie un client |
+| DELETE | `/api/clients/[id]` | Supprime un client |
+| GET | `/api/livraisons?limit=50&offset=0` | Liste les livraisons paginées |
+| POST | `/api/livraisons` | Crée une livraison |
+| PUT | `/api/livraisons/[id]` | Modifie une livraison |
+| DELETE | `/api/livraisons/[id]` | Supprime une livraison |
+| GET | `/api/achats` | Liste tous les achats |
+| POST | `/api/achats` | Crée un achat |
+| PUT | `/api/achats/[id]` | Modifie un achat |
+| DELETE | `/api/achats/[id]` | Supprime un achat |
+| GET | `/api/produits` | Liste tous les produits |
+| POST | `/api/produits` | Crée un produit |
+| PUT | `/api/produits/[id]` | Modifie un produit |
+| DELETE | `/api/produits/[id]` | Supprime un produit |
+
+## Schéma base de données
+
+- `users` — utilisateurs avec rôles
+- `clients` — 87 magasins partenaires au Cambodge
+- `produits` — produits livrés
+- `ingredients` — ingrédients
+- `achats` — achats d'ingrédients
+- `livraisons` — livraisons (en_cours, livree, annulee)
+- `livraison_produits` — lignes de livraison
+- `recettes` — recettes
+- `prix_produits` — prix par client et produit
+
+## Déploiement Netlify
+
+```bash
+git push origin main
+```
+
+Variables d'environnement dans le dashboard Netlify :
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+
+## Branches Git
+
+| Branche | Rôle |
+|---------|------|
+| `main` | Production |
+| `feature/redesign-ui` | Développements en cours |
+| `develop` | Intégration |
 
 ## Correspondance Flutter → Next.js
 
-| Flutter | Next.js |
-|---------|---------|
-| Firebase Firestore | Neon PostgreSQL |
-| `ClientService` | `GET/POST /api/clients` |
-| `ProduitService` | `GET/POST /api/produits` |
-| `IncrediantService` | `GET/POST /api/ingredients` |
-| `AchatService` | `GET/POST /api/achats` |
-| `LivraisonService` | `GET/POST /api/livraisons` |
-| `RecetteService` | `GET/POST /api/recettes` |
-| App livraison (Flutter) | `/livraison` (Next.js) |
-| App achat (Flutter) | `/achat` (Next.js) |
-| App admin (Flutter) | `/admin` (Next.js) |
+| Flutter / Firebase | Next.js / PostgreSQL |
+|--------------------|---------------------|
+| Collection `clients` | Table `clients` + `/api/clients` |
+| Collection `produits` | Table `produits` + `/api/produits` |
+| Collection `incrediants` | Table `ingredients` (faute corrigée) |
+| Collection `achats` | Table `achats` + `/api/achats` |
+| Collection `livraisons` | Table `livraisons` + `livraison_produits` |
+| Collection `recettes` | Table `recettes` |
+| App livraison Flutter | `/livraison` — 5 étapes |
+| App achat Flutter | `/achat` |
+| App admin Flutter | `/admin` |
+| — | `/manager` — nouveau rôle |
+| — | `/livraison/planning` — historique |
