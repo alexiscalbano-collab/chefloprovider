@@ -27,7 +27,7 @@ export default function ProduitsSection() {
 
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         .ps-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
         .ps-title { font-size: 18px; font-weight: 600; color: #0a0f1e; }
         .ps-count { font-size: 13px; color: #9ca3af; margin-top: 2px; }

@@ -7,6 +7,7 @@ import IngredientsSection from '@/components/admin/IngredientsSection'
 import RecettesSection from '@/components/admin/RecettesSection'
 import LivraisonsSection from '@/components/admin/LivraisonsSection'
 import AchatsSection from '@/components/admin/AchatsSection'
+import StatistiquesSection from '@/components/admin/StatistiquesSection'
 
 const SECTIONS = [
   { id: 'clients', label: 'Clients', icon: '👥' },
@@ -15,6 +16,7 @@ const SECTIONS = [
   { id: 'recettes', label: 'Recettes', icon: '📋' },
   { id: 'livraisons', label: 'Livraisons', icon: '🚚' },
   { id: 'achats', label: 'Achats', icon: '🛒' },
+  { id: 'statistiques', label: 'Statistiques', icon: '📊' },
 ]
 
 export default function AdminPage() {
@@ -22,7 +24,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: #f4f3f0; }
@@ -81,6 +83,7 @@ export default function AdminPage() {
             {active === 'recettes' && <RecettesSection />}
             {active === 'livraisons' && <LivraisonsSection />}
             {active === 'achats' && <AchatsSection />}
+            {active === 'statistiques' && <StatistiquesSection />}
           </div>
         </main>
       </div>

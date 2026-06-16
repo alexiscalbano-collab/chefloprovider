@@ -21,7 +21,7 @@ export default function IngredientsSection() {
 
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         .is-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
         .is-title { font-size: 18px; font-weight: 600; color: #0a0f1e; }
         .is-count { font-size: 13px; color: #9ca3af; margin-top: 2px; }
