@@ -126,7 +126,7 @@ export default function StatistiquesSection() {
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie data={caParClientData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}
-                label={({name, percent}) => `${name.slice(0,8)} ${(percent*100).toFixed(0)}%`}
+                label={({name, percent}) => `${(name as string)?.slice(0,8) ?? ''} ${((percent ?? 0)*100).toFixed(0)}%`}
                 labelLine={false} fontSize={10}>
                 {caParClientData.map((_,i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
