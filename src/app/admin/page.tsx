@@ -8,6 +8,7 @@ import RecettesSection from '@/components/admin/RecettesSection'
 import LivraisonsSection from '@/components/admin/LivraisonsSection'
 import AchatsSection from '@/components/admin/AchatsSection'
 import StatistiquesSection from '@/components/admin/StatistiquesSection'
+import PlanningSection from '@/components/admin/PlanningSection'
 
 const SECTIONS = [
   { id: 'clients', label: 'Clients', icon: '👥' },
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'livraisons', label: 'Livraisons', icon: '🚚' },
   { id: 'achats', label: 'Achats', icon: '🛒' },
   { id: 'statistiques', label: 'Statistiques', icon: '📊' },
+  { id: 'planning', label: 'Planning', icon: '📅' },
 ]
 
 export default function AdminPage() {
@@ -84,6 +86,7 @@ export default function AdminPage() {
             {active === 'livraisons' && <LivraisonsSection />}
             {active === 'achats' && <AchatsSection />}
             {active === 'statistiques' && <StatistiquesSection />}
+            {active === 'planning' && <PlanningSection />}
           </div>
         </main>
       </div>
