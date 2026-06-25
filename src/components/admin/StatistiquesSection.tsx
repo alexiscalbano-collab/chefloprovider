@@ -98,7 +98,7 @@ export default function StatistiquesSection() {
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis dataKey="mois" tick={{fontSize:12,fill:'#9ca3af'}} />
             <YAxis tick={{fontSize:12,fill:'#9ca3af'}} />
-            <Tooltip formatter={(v: number) => `$${v.toFixed(2)}`} />
+            <Tooltip formatter={(v: unknown) => `$${(v as number).toFixed(2)}`} />
             <Line type="monotone" dataKey="ca" stroke="#16a34a" strokeWidth={2} name="CA ($)" dot={{r:3}} />
           </LineChart>
         </ResponsiveContainer>
@@ -130,7 +130,7 @@ export default function StatistiquesSection() {
                 labelLine={false} fontSize={10}>
                 {caParClientData.map((_,i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => `$${v.toFixed(2)}`} />
+              <Tooltip formatter={(v: unknown) => `$${(v as number).toFixed(2)}`} />
             </PieChart>
           </ResponsiveContainer>
         </div>
