@@ -83,7 +83,7 @@ export default function LivraisonPage() {
   if (success) {
     return (
       <>
-        <style>{`
+        <style suppressHydrationWarning>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: 'DM Sans', sans-serif; background: #f4f3f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -107,7 +107,7 @@ export default function LivraisonPage() {
 
   return (
     <>
-      <style>{`
+      <style suppressHydrationWarning>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; background: #f4f3f0; min-height: 100vh; }
@@ -180,6 +180,7 @@ export default function LivraisonPage() {
             <div className="lv-logo">C</div>
             <span className="lv-brand-name">ChefloProvider</span>
           </div>
+          <a href="/livraison/planning" className="lv-lang-btn" style={{marginRight: "8px"}}>📅 Planning</a>
           <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className="lv-lang-btn">
             {lang === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR'}
           </button>
